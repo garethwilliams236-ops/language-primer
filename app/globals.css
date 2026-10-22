@@ -223,4 +223,15 @@ main{padding-bottom:220px}
 .auth .plan{gap:12px}
 .auth .err{color:var(--bad);font-size:.9rem}
 
+/* admin */
+.people{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.person{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:8px}
+.person-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.person .lr-title{overflow-wrap:anywhere}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start}
+.inline-form{display:grid;gap:10px;background:var(--sunk);border-radius:var(--r);padding:12px 14px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:.9rem}
+.check input{margin-top:3px}
+.link.danger{color:var(--bad)}
+.link:disabled{opacity:.5}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;scroll-behavior:auto!important}}

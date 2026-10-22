@@ -4,16 +4,42 @@ import type { LangConfig, ReaderText } from "./types";
 import { LEVELS } from "./levels";
 import { clean, wkey } from "./course";
 
-/** Returns the signed-in user for this request, or null if missing, invalid, or not on the allow list. */
-export async function requireUser(req: Request) {
+const emails = (v?: string) => (v || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+/** Admins are the addresses in ADMIN_EMAILS. */
+export const adminEmails = () => emails(process.env.ADMIN_EMAILS);
+export const isAdminEmail = (email?: string | null) => !!email && adminEmails().includes(email.toLowerCase());
+
+/** Whether a user may use the Claude and ElevenLabs features. */
+export function hasReaderAccess(user: { email?: string | null; app_metadata?: any }) {
+  const allow = emails(process.env.ALLOWED_EMAILS);
+  const email = (user.email || "").toLowerCase();
+  if (!allow.length && !adminEmails().length) return true;
+  return allow.includes(email) || isAdminEmail(email) || user.app_metadata?.reader === true;
+}
+
+async function userFromToken(req: Request) {
   const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   if (!token) return null;
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const { data, error } = await sb.auth.getUser(token);
-  if (error || !data.user) return null;
-  const allow = (process.env.ALLOWED_EMAILS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-  if (allow.length && !allow.includes((data.user.email || "").toLowerCase())) return null;
-  return data.user;
+  return error || !data.user ? null : data.user;
+}
+
+/** The signed-in user, if they may use the Claude and ElevenLabs features. */
+export async function requireUser(req: Request) {
+  const user = await userFromToken(req);
+  return user && hasReaderAccess(user) ? user : null;
+}
+
+/** The signed-in user, if they are an admin. */
+export async function requireAdmin(req: Request) {
+  const user = await userFromToken(req);
+  return user && isAdminEmail(user.email) ? user : null;
+}
+
+export function adminClient() {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw { status: 503, code: "no_service_key" };
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
 export const json = (body: unknown, status = 200) => Response.json(body, { status });

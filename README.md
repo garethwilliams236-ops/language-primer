@@ -20,6 +20,9 @@ Next.js 15 (App Router, TypeScript) on Vercel · Supabase (auth, Postgres with R
 2. Vercel: import the GitHub repo and add the variables from `.env.example`.
 3. Local: copy `.env.example` to `.env.local`, fill it in, then `npm install` and `npm run dev` (port 3080).
 
+## Admin
+Addresses in `ADMIN_EMAILS` see an **Admin** link at the bottom of the app. It lists everyone who can sign in, adds people, resets passwords, removes people, and turns Reader access (Claude and ElevenLabs, which spend API credit) on or off per person. Reader access is stored on the person's Supabase account (`app_metadata.reader`), so no extra table is needed.
+
 ## Checks
 - `npm run typecheck`
 - `npm run check:content` — lesson fields, quizzes, and a gloss for every word in the library texts

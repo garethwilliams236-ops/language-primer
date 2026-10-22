@@ -6,6 +6,7 @@ import { buildQuiz } from "@/lib/quiz";
 import { speech } from "@/lib/speech";
 import { api, supabase } from "@/lib/supabase";
 import * as store from "@/lib/store";
+import Admin from "./Admin";
 import { PlayIcon, Rich, Ru } from "@/lib/text";
 import type { LangConfig, Lesson, QuizState, ReaderText, Tab } from "@/lib/types";
 
@@ -70,6 +71,8 @@ export default function Primer({ email }: { email: string }) {
   const [rmode, setRmode] = useState("tap");
   const [rlevel, setRlevel] = useState("A1");
   const [, refresh] = useReducer((x: number) => x + 1, 0);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const lesson = lessonId ? all.find((l) => l.id === lessonId) || null : null;
 
   /* load prefs once */
@@ -79,6 +82,7 @@ export default function Primer({ email }: { email: string }) {
     setRmode(readPref("rmode", "tap")); setRlevel(readPref("rlevel", "A1"));
     speech.init();
     const un = speech.subscribe(refresh);
+    api<{ admin: boolean }>("/api/me").then((m) => setIsAdmin(!!m.admin)).catch(() => {});
     fetch("/api/tts").then((r) => r.json()).then((j) => { speech.elevenAvailable = !!j.enabled; refresh(); }).catch(() => {});
     return () => { un(); };
   }, []);
@@ -122,7 +126,7 @@ export default function Primer({ email }: { email: string }) {
   }, [lesson, step, quiz, L]);
 
   const top = () => window.scrollTo(0, 0);
-  const goTab = useCallback((id: string) => { speech.stop(); setLessonId(null); setReading(null); setQuiz(null); setTab(id); top(); }, []);
+  const goTab = useCallback((id: string) => { speech.stop(); setShowAdmin(false); setLessonId(null); setReading(null); setQuiz(null); setTab(id); top(); }, []);
   const openLesson = (l: Lesson) => { speech.stop(); setReading(null); setTab(l.tabId); setLessonId(l.id); setStep(0); setQuiz(null); top(); };
   const goStep = (i: number) => { speech.stop(); setStep(i); top(); };
   const changeLang = (code: string) => { speech.stop(); setLessonId(null); setReading(null); setQuiz(null); setLangState(code); top(); };
@@ -169,13 +173,14 @@ export default function Primer({ email }: { email: string }) {
         {dataErr && <p className="notice">Your saved data couldn't load: {dataErr}</p>}
       </div>
       <main className="wrap">
-        {lesson ? renderLesson(lesson)
+        {showAdmin ? <Admin onClose={() => setShowAdmin(false)} />
+          : lesson ? renderLesson(lesson)
           : tab === "reader" ? (reading ? renderReading() : <ReaderHome L={L} lang={lang} tabInfo={currentTab} libraryTexts={course.texts} texts={texts} rlevel={rlevel} setRlevel={setRlevel} onAdded={(t) => { setTexts([t, ...(texts || [])]); openReading(t); }} onOpen={openReading} />)
           : tab === "review" ? <Review L={L} tabInfo={currentTab} all={all} progress={progress} words={words} />
           : renderOverview()}
       </main>
       <footer className="wrap" style={{ paddingBottom: 40 }}>
-        <p className="muted" style={{ fontSize: ".8rem" }}>Signed in as {email} · <button type="button" className="link" onClick={() => supabase().auth.signOut()}>Sign out</button></p>
+        <p className="muted" style={{ fontSize: ".8rem" }}>Signed in as {email} · {isAdmin && <><button type="button" className="link" onClick={() => { speech.stop(); setShowAdmin(true); top(); }}>Admin</button> · </>}<button type="button" className="link" onClick={() => supabase().auth.signOut()}>Sign out</button></p>
       </footer>
     </div>
   );
